@@ -1,0 +1,4273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <meta name="theme-color" content="#020810">
+
+    <title>PAC-PIRATA | Belgrano vs Talleres</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(
+                    circle at 50% 20%,
+                    #12345b 0%,
+                    #071321 45%,
+                    #02060b 100%
+                );
+
+            font-family:
+                Inter,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            color: #fff;
+        }
+
+        body {
+            min-height: 100dvh;
+            touch-action: none;
+        }
+
+        button {
+            font: inherit;
+        }
+
+        #game-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+
+            background:
+                radial-gradient(
+                    circle at 50% 45%,
+                    rgba(0, 212, 255, .08),
+                    transparent 45%
+                );
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+
+        /* =========================================================
+           HUD
+        ========================================================= */
+
+        #hud {
+            position: fixed;
+            z-index: 20;
+
+            top: max(12px, env(safe-area-inset-top));
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            width: min(94vw, 760px);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 10px;
+
+            padding: 10px 12px;
+
+            background: rgba(4, 12, 23, .72);
+
+            border: 1px solid rgba(91, 225, 255, .20);
+
+            border-radius: 18px;
+
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+
+            box-shadow:
+                0 12px 40px rgba(0, 0, 0, .35),
+                inset 0 1px rgba(255, 255, 255, .05);
+
+            pointer-events: none;
+        }
+
+        .hud-side {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .hud-logo {
+            width: 38px;
+            height: 38px;
+
+            object-fit: contain;
+
+            filter:
+                drop-shadow(
+                    0 0 8px
+                    rgba(0, 210, 255, .55)
+                );
+        }
+
+        .hud-title {
+            font-size: clamp(10px, 2vw, 13px);
+
+            font-weight: 900;
+
+            letter-spacing: .14em;
+
+            text-transform: uppercase;
+
+            white-space: nowrap;
+
+            color: #9eeeff;
+        }
+
+        .hud-value {
+            font-size: clamp(18px, 4vw, 25px);
+
+            font-weight: 1000;
+
+            line-height: 1;
+
+            white-space: nowrap;
+        }
+
+        .hud-label {
+            font-size: 9px;
+
+            text-transform: uppercase;
+
+            letter-spacing: .1em;
+
+            color: rgba(255, 255, 255, .52);
+
+            margin-bottom: 3px;
+        }
+
+        #score-value {
+            color: #61e7ff;
+
+            text-shadow:
+                0 0 16px
+                rgba(97, 231, 255, .55);
+        }
+
+        #remaining-value {
+            color: #fff;
+        }
+
+
+        /* =========================================================
+           BOTONES SUPERIORES
+        ========================================================= */
+
+        #top-actions {
+            position: fixed;
+            z-index: 25;
+
+            top: max(
+                82px,
+                calc(env(safe-area-inset-top) + 70px)
+            );
+
+            right: 16px;
+
+            display: flex;
+
+            gap: 8px;
+        }
+
+        .icon-button {
+            width: 44px;
+            height: 44px;
+
+            border-radius: 14px;
+
+            border: 1px solid rgba(255,255,255,.12);
+
+            background:
+                rgba(4, 12, 23, .72);
+
+            color: white;
+
+            cursor: pointer;
+
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+
+            transition:
+                transform .15s ease,
+                background .15s ease,
+                border-color .15s ease;
+        }
+
+        .icon-button:hover {
+            transform: translateY(-2px);
+
+            background:
+                rgba(10, 28, 48, .9);
+
+            border-color:
+                rgba(91,225,255,.35);
+        }
+
+        .icon-button:active {
+            transform: scale(.94);
+        }
+
+
+        /* =========================================================
+           PANTALLAS
+        ========================================================= */
+
+        .screen {
+            position: fixed;
+            z-index: 100;
+            inset: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 24px;
+
+            background:
+                radial-gradient(
+                    circle at 50% 30%,
+                    rgba(15, 69, 111, .55),
+                    transparent 42%
+                ),
+                rgba(1, 5, 10, .78);
+
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+
+            transition:
+                opacity .35s ease,
+                visibility .35s ease;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+
+            visibility: hidden;
+
+            pointer-events: none;
+        }
+
+        .panel {
+            width: min(92vw, 620px);
+
+            max-height:
+                min(88dvh, 760px);
+
+            overflow: auto;
+
+            padding:
+                clamp(24px, 5vw, 42px);
+
+            border-radius: 28px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(15, 33, 53, .96),
+                    rgba(4, 13, 24, .96)
+                );
+
+            border:
+                1px solid
+                rgba(111, 229, 255, .22);
+
+            box-shadow:
+                0 35px 100px rgba(0,0,0,.55),
+                inset 0 1px rgba(255,255,255,.06);
+
+            text-align: center;
+        }
+
+        .brand {
+            display: inline-flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 7px 12px;
+
+            border-radius: 999px;
+
+            background:
+                rgba(97, 231, 255, .08);
+
+            border:
+                1px solid
+                rgba(97, 231, 255, .16);
+
+            color: #8eeeff;
+
+            font-size: 11px;
+
+            font-weight: 900;
+
+            letter-spacing: .14em;
+
+            text-transform: uppercase;
+        }
+
+        .main-title {
+            margin-top: 18px;
+
+            font-size:
+                clamp(42px, 11vw, 82px);
+
+            line-height: .88;
+
+            font-weight: 1000;
+
+            letter-spacing: -.06em;
+
+            color: #fff;
+
+            text-shadow:
+                0 0 30px
+                rgba(75, 222, 255, .18);
+        }
+
+        .main-title span {
+            color: #61e7ff;
+        }
+
+        .subtitle {
+            margin-top: 18px;
+
+            color:
+                rgba(255,255,255,.68);
+
+            font-size:
+                clamp(13px, 3vw, 17px);
+
+            line-height: 1.55;
+        }
+
+
+        /* =========================================================
+           VERSUS
+        ========================================================= */
+
+        .versus {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 22px;
+
+            margin: 28px 0;
+        }
+
+        .team-card {
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            gap: 8px;
+        }
+
+        .team-card img {
+            width:
+                clamp(64px, 18vw, 100px);
+
+            height:
+                clamp(64px, 18vw, 100px);
+
+            object-fit: contain;
+
+            filter:
+                drop-shadow(
+                    0 0 14px
+                    rgba(75, 222, 255, .25)
+                );
+        }
+
+        .team-name {
+            font-size: 11px;
+
+            font-weight: 1000;
+
+            letter-spacing: .1em;
+
+            text-transform: uppercase;
+        }
+
+        .versus-text {
+            font-size: 20px;
+
+            font-weight: 1000;
+
+            color:
+                rgba(255,255,255,.35);
+        }
+
+
+        /* =========================================================
+           BOTONES
+        ========================================================= */
+
+        .primary-button {
+            width: 100%;
+
+            min-height: 58px;
+
+            border: 0;
+
+            border-radius: 17px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #61e7ff,
+                    #168dff
+                );
+
+            color: #02111d;
+
+            font-size: 15px;
+
+            font-weight: 1000;
+
+            letter-spacing: .08em;
+
+            text-transform: uppercase;
+
+            cursor: pointer;
+
+            box-shadow:
+                0 10px 30px
+                rgba(0, 177, 255, .25);
+
+            transition:
+                transform .16s ease,
+                box-shadow .16s ease,
+                filter .16s ease;
+        }
+
+        .primary-button:hover {
+            transform: translateY(-2px);
+
+            filter: brightness(1.08);
+
+            box-shadow:
+                0 16px 40px
+                rgba(0, 177, 255, .34);
+        }
+
+        .primary-button:active {
+            transform:
+                translateY(1px)
+                scale(.99);
+        }
+
+        .secondary-button {
+            width: 100%;
+
+            min-height: 52px;
+
+            margin-top: 10px;
+
+            border-radius: 15px;
+
+            border:
+                1px solid
+                rgba(255,255,255,.12);
+
+            background:
+                rgba(255,255,255,.055);
+
+            color: #fff;
+
+            cursor: pointer;
+
+            font-weight: 800;
+
+            transition: .15s ease;
+        }
+
+        .secondary-button:hover {
+            background:
+                rgba(255,255,255,.09);
+        }
+
+
+        /* =========================================================
+           INSTRUCCIONES
+        ========================================================= */
+
+        .instructions {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 9px;
+
+            margin-top: 18px;
+        }
+
+        .instruction {
+            padding: 12px;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,255,255,.035);
+
+            border:
+                1px solid
+                rgba(255,255,255,.07);
+
+            color:
+                rgba(255,255,255,.62);
+
+            font-size: 11px;
+
+            line-height: 1.45;
+        }
+
+        .instruction strong {
+            display: block;
+
+            color: #fff;
+
+            margin-bottom: 3px;
+        }
+
+
+        /* =========================================================
+           CONTROLES MOBILE
+        ========================================================= */
+
+        #mobile-controls {
+            position: fixed;
+
+            z-index: 30;
+
+            left: 50%;
+
+            bottom:
+                max(
+                    15px,
+                    env(safe-area-inset-bottom)
+                );
+
+            transform:
+                translateX(-50%);
+
+            width:
+                min(240px, 68vw);
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            grid-template-rows:
+                repeat(2, 58px);
+
+            gap: 7px;
+
+            opacity: .92;
+        }
+
+        .control {
+            border:
+                1px solid
+                rgba(104, 229, 255, .18);
+
+            border-radius: 16px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(20, 50, 75, .86),
+                    rgba(5, 17, 29, .9)
+                );
+
+            color: white;
+
+            font-size: 24px;
+
+            box-shadow:
+                0 8px 25px
+                rgba(0,0,0,.22);
+
+            user-select: none;
+
+            cursor: pointer;
+
+            touch-action: manipulation;
+        }
+
+        .control:active {
+            transform: scale(.94);
+
+            background:
+                rgba(43, 112, 146, .75);
+        }
+
+        .up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .down {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+
+        /* =========================================================
+           MENSAJE
+        ========================================================= */
+
+        #message {
+            position: fixed;
+
+            z-index: 22;
+
+            left: 50%;
+            top: 50%;
+
+            transform:
+                translate(-50%, -50%)
+                scale(.8);
+
+            padding:
+                13px 22px;
+
+            border-radius: 999px;
+
+            background:
+                rgba(3, 13, 24, .84);
+
+            border:
+                1px solid
+                rgba(97,231,255,.3);
+
+            color: #fff;
+
+            font-size:
+                clamp(15px, 4vw, 24px);
+
+            font-weight: 1000;
+
+            white-space: nowrap;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+            box-shadow:
+                0 15px 50px
+                rgba(0,0,0,.35),
+
+                0 0 30px
+                rgba(97,231,255,.14);
+
+            transition:
+                opacity .2s ease,
+                transform .2s ease;
+        }
+
+        #message.show {
+            opacity: 1;
+
+            transform:
+                translate(-50%, -50%)
+                scale(1);
+        }
+
+
+        /* =========================================================
+           VICTORIA
+        ========================================================= */
+
+        .win-title {
+            font-size:
+                clamp(38px, 10vw, 70px);
+
+            line-height: .95;
+
+            font-weight: 1000;
+
+            color: #61e7ff;
+
+            text-shadow:
+                0 0 28px
+                rgba(97,231,255,.35);
+        }
+
+        .win-subtitle {
+            margin-top: 15px;
+
+            font-size:
+                clamp(15px, 4vw, 20px);
+
+            font-weight: 800;
+        }
+
+        .goal-box {
+            margin: 22px 0;
+
+            padding: 16px;
+
+            border-radius: 17px;
+
+            background:
+                rgba(255,255,255,.045);
+
+            border:
+                1px solid
+                rgba(255,255,255,.08);
+
+            color:
+                rgba(255,255,255,.67);
+
+            font-size: 12px;
+
+            line-height: 1.55;
+        }
+
+        .goal-box strong {
+            display: block;
+
+            color: white;
+
+            font-size: 15px;
+
+            margin-bottom: 5px;
+        }
+
+
+        /* =========================================================
+           PAUSA
+        ========================================================= */
+
+        .pause-title {
+            font-size:
+                clamp(35px, 9vw, 60px);
+
+            font-weight: 1000;
+        }
+
+
+        /* =========================================================
+           RESPONSIVE
+        ========================================================= */
+
+        @media (min-width: 800px) {
+
+            #mobile-controls {
+                opacity: .55;
+            }
+
+        }
+
+
+        @media (max-width: 650px) {
+
+            #hud {
+                width:
+                    calc(100vw - 20px);
+
+                padding:
+                    8px 10px;
+
+                border-radius: 15px;
+            }
+
+            .hud-logo {
+                width: 32px;
+                height: 32px;
+            }
+
+            #top-actions {
+
+                top:
+                    max(
+                        72px,
+                        calc(
+                            env(safe-area-inset-top)
+                            + 62px
+                        )
+                    );
+
+                right: 10px;
+            }
+
+            .icon-button {
+                width: 40px;
+                height: 40px;
+
+                border-radius: 12px;
+            }
+
+            .panel {
+                border-radius: 22px;
+
+                padding:
+                    24px 19px;
+            }
+
+            .instructions {
+                grid-template-columns: 1fr;
+            }
+
+            #mobile-controls {
+                width:
+                    min(220px, 65vw);
+
+                grid-template-rows:
+                    repeat(2, 53px);
+            }
+
+            .control {
+                border-radius: 14px;
+
+                font-size: 21px;
+            }
+
+        }
+
+
+        @media (
+            max-height: 600px
+        ) and (
+            orientation: landscape
+        ) {
+
+            #hud {
+                top: 8px;
+            }
+
+            #top-actions {
+                top: 60px;
+            }
+
+            #mobile-controls {
+                left: 25px;
+
+                bottom: 15px;
+
+                transform: none;
+
+                width: 190px;
+
+                grid-template-rows:
+                    repeat(2, 45px);
+            }
+
+            .control {
+                font-size: 19px;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            .versus {
+                margin: 14px 0;
+            }
+
+            .team-card img {
+                width: 58px;
+                height: 58px;
+            }
+
+        }
+
+
+        @media (
+            prefers-reduced-motion: reduce
+        ) {
+
+            *,
+            *::before,
+            *::after {
+
+                scroll-behavior: auto !important;
+
+                animation-duration:
+                    .001ms !important;
+
+                transition-duration:
+                    .001ms !important;
+            }
+
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+
+<div id="game-container"></div>
+
+
+<!-- =========================================================
+     HUD
+========================================================= -->
+
+<div id="hud">
+
+    <div class="hud-side">
+
+        <img
+            id="hud-belgrano"
+            class="hud-logo"
+            alt="Belgrano"
+        >
+
+        <div>
+
+            <div class="hud-label">
+                PAC-PIRATA
+            </div>
+
+            <div class="hud-title">
+                BELGRANO
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div>
+
+        <div class="hud-label">
+            PUNTOS
+        </div>
+
+        <div
+            id="score-value"
+            class="hud-value"
+        >
+            0
+        </div>
+
+    </div>
+
+
+    <div>
+
+        <div class="hud-label">
+            GALLINITAS
+        </div>
+
+        <div
+            id="remaining-value"
+            class="hud-value"
+        >
+            8
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BOTONES
+========================================================= -->
+
+<div id="top-actions">
+
+    <button
+        id="pause-button"
+        class="icon-button"
+        type="button"
+        aria-label="Pausar"
+        title="Pausar"
+    >
+        ❚❚
+    </button>
+
+
+    <button
+        id="restart-button"
+        class="icon-button"
+        type="button"
+        aria-label="Reiniciar"
+        title="Reiniciar"
+    >
+        ↻
+    </button>
+
+</div>
+
+
+<!-- =========================================================
+     MENSAJE
+========================================================= -->
+
+<div id="message"></div>
+
+
+<!-- =========================================================
+     CONTROLES MOBILE
+========================================================= -->
+
+<div id="mobile-controls">
+
+    <button
+        class="control up"
+        data-direction="up"
+        type="button"
+        aria-label="Arriba"
+    >
+        ▲
+    </button>
+
+
+    <button
+        class="control left"
+        data-direction="left"
+        type="button"
+        aria-label="Izquierda"
+    >
+        ◀
+    </button>
+
+
+    <button
+        class="control down"
+        data-direction="down"
+        type="button"
+        aria-label="Abajo"
+    >
+        ▼
+    </button>
+
+
+    <button
+        class="control right"
+        data-direction="right"
+        type="button"
+        aria-label="Derecha"
+    >
+        ▶
+    </button>
+
+</div>
+
+
+<!-- =========================================================
+     INICIO
+========================================================= -->
+
+<div
+    id="start-screen"
+    class="screen"
+>
+
+    <div class="panel">
+
+        <div class="brand">
+            ⚽ CLÁSICO CORDOBÉS
+        </div>
+
+
+        <h1 class="main-title">
+            PAC-<span>PIRATA</span>
+        </h1>
+
+
+        <p class="subtitle">
+            Comé todas las gallinitas,
+            esquivá las paredes
+            y preparate para el final.
+        </p>
+
+
+        <div class="versus">
+
+            <div class="team-card">
+
+                <img
+                    id="start-belgrano"
+                    alt="Escudo de Belgrano"
+                >
+
+                <div class="team-name">
+                    BELGRANO
+                </div>
+
+            </div>
+
+
+            <div class="versus-text">
+                VS
+            </div>
+
+
+            <div class="team-card">
+
+                <img
+                    id="start-talleres"
+                    alt="Escudo de Talleres"
+                >
+
+                <div class="team-name">
+                    TALLERES
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <button
+            id="start-button"
+            class="primary-button"
+            type="button"
+        >
+            ⚽ JUGAR AHORA
+        </button>
+
+
+        <div class="instructions">
+
+            <div class="instruction">
+
+                <strong>
+                    ⌨️ PC
+                </strong>
+
+                WASD o flechas
+                para moverte.
+
+            </div>
+
+
+            <div class="instruction">
+
+                <strong>
+                    📱 CELULAR
+                </strong>
+
+                Usá los controles
+                táctiles.
+
+            </div>
+
+
+            <div class="instruction">
+
+                <strong>
+                    🐔 OBJETIVO
+                </strong>
+
+                Comé las 8
+                gallinitas.
+
+            </div>
+
+
+            <div class="instruction">
+
+                <strong>
+                    ⚽ FINAL
+                </strong>
+
+                Mirá el gol
+                de Metilli.
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     PAUSA
+========================================================= -->
+
+<div
+    id="pause-screen"
+    class="screen hidden"
+>
+
+    <div class="panel">
+
+        <div class="brand">
+            ⏸ JUEGO PAUSADO
+        </div>
+
+
+        <h2 class="pause-title">
+            PAUSA
+        </h2>
+
+
+        <p class="subtitle">
+            El clásico queda congelado.
+        </p>
+
+
+        <button
+            id="resume-button"
+            class="primary-button"
+            type="button"
+            style="margin-top:24px;"
+        >
+            ▶ CONTINUAR
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     VICTORIA
+========================================================= -->
+
+<div
+    id="win-screen"
+    class="screen hidden"
+>
+
+    <div class="panel">
+
+        <div class="brand">
+            🏆 PARTIDO TERMINADO
+        </div>
+
+
+        <h2 class="win-title">
+            ¡BELGRANO!
+        </h2>
+
+
+        <div class="win-subtitle">
+            ¡TE LA METILLI!
+        </div>
+
+
+        <div class="goal-box">
+
+            <strong>
+                ⚽ GOL DE METILLI
+            </strong>
+
+            Preparando el video
+            del gol...
+
+        </div>
+
+
+        <button
+            id="goal-button"
+            class="primary-button"
+            type="button"
+        >
+            ▶ VER EL GOL
+        </button>
+
+
+        <button
+            id="play-again-button"
+            class="secondary-button"
+            type="button"
+        >
+            🔄 JUGAR DE NUEVO
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     THREE.JS
+========================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+
+<script>
+
+"use strict";
+
+
+/* =========================================================
+   CONFIGURACIÓN
+========================================================= */
+
+const CONFIG = {
+
+    BELGRANO_LOGO:
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Escudo%20de%20Belgrano%20de%20C%C3%B3rdoba.svg",
+
+    TALLERES_LOGO:
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Escudo%20del%20Club%20Atl%C3%A9tico%20Talleres.svg",
+
+    GOAL_URL:
+        "https://www.youtube.com/shorts/_NdoGGlA8kA",
+
+    GRID_SIZE: 15,
+
+    PLAYER_SPEED: 5.2,
+
+    CHICKEN_SPEED: 2.1,
+
+    TOTAL_CHICKENS: 8,
+
+    POINTS_PER_CHICKEN: 100
+
+};
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const container =
+    document.getElementById(
+        "game-container"
+    );
+
+
+const scoreElement =
+    document.getElementById(
+        "score-value"
+    );
+
+
+const remainingElement =
+    document.getElementById(
+        "remaining-value"
+    );
+
+
+const messageElement =
+    document.getElementById(
+        "message"
+    );
+
+
+const startScreen =
+    document.getElementById(
+        "start-screen"
+    );
+
+
+const pauseScreen =
+    document.getElementById(
+        "pause-screen"
+    );
+
+
+const winScreen =
+    document.getElementById(
+        "win-screen"
+    );
+
+
+const startButton =
+    document.getElementById(
+        "start-button"
+    );
+
+
+const pauseButton =
+    document.getElementById(
+        "pause-button"
+    );
+
+
+const restartButton =
+    document.getElementById(
+        "restart-button"
+    );
+
+
+const resumeButton =
+    document.getElementById(
+        "resume-button"
+    );
+
+
+const goalButton =
+    document.getElementById(
+        "goal-button"
+    );
+
+
+const playAgainButton =
+    document.getElementById(
+        "play-again-button"
+    );
+
+
+/* =========================================================
+   LOGOS HTML
+========================================================= */
+
+document.getElementById(
+    "hud-belgrano"
+).src =
+    CONFIG.BELGRANO_LOGO;
+
+
+document.getElementById(
+    "start-belgrano"
+).src =
+    CONFIG.BELGRANO_LOGO;
+
+
+document.getElementById(
+    "start-talleres"
+).src =
+    CONFIG.TALLERES_LOGO;
+
+
+/* =========================================================
+   THREE.JS
+========================================================= */
+
+const scene =
+    new THREE.Scene();
+
+
+scene.background =
+    new THREE.Color(
+        0x020810
+    );
+
+
+scene.fog =
+    new THREE.FogExp2(
+        0x020810,
+        0.035
+    );
+
+
+const camera =
+    new THREE.PerspectiveCamera(
+        52,
+
+        window.innerWidth /
+        window.innerHeight,
+
+        0.1,
+
+        300
+    );
+
+
+camera.position.set(
+    0,
+    22,
+    16
+);
+
+
+camera.lookAt(
+    0,
+    0,
+    0
+);
+
+
+const renderer =
+    new THREE.WebGLRenderer({
+
+        antialias: true,
+
+        alpha: false,
+
+        powerPreference:
+            "high-performance"
+
+    });
+
+
+renderer.setPixelRatio(
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    )
+);
+
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+
+renderer.outputColorSpace =
+    THREE.SRGBColorSpace;
+
+
+container.appendChild(
+    renderer.domElement
+);
+
+
+/* =========================================================
+   LUCES
+========================================================= */
+
+const ambientLight =
+    new THREE.AmbientLight(
+        0x8fdfff,
+        1.6
+    );
+
+
+scene.add(
+    ambientLight
+);
+
+
+const directionalLight =
+    new THREE.DirectionalLight(
+        0xffffff,
+        2.2
+    );
+
+
+directionalLight.position.set(
+    5,
+    20,
+    10
+);
+
+
+scene.add(
+    directionalLight
+);
+
+
+const blueLight =
+    new THREE.PointLight(
+        0x00cfff,
+        18,
+        35
+    );
+
+
+blueLight.position.set(
+    0,
+    5,
+    0
+);
+
+
+scene.add(
+    blueLight
+);
+
+
+/* =========================================================
+   TABLERO
+========================================================= */
+
+const boardGroup =
+    new THREE.Group();
+
+
+scene.add(
+    boardGroup
+);
+
+
+const CELL =
+    2.0;
+
+
+const BOARD_SIZE =
+    CONFIG.GRID_SIZE *
+    CELL;
+
+
+/* =========================================================
+   LABERINTO
+========================================================= */
+
+const MAZE = [
+
+    "###############",
+
+    "#.............#",
+
+    "#.###.#####.#.#",
+
+    "#.#.........#.#",
+
+    "#.#.###.###.#.#",
+
+    "#...#.....#...#",
+
+    "###.#.###.#.###",
+
+    "#...#.....#...#",
+
+    "#.#.###.###.#.#",
+
+    "#.#.........#.#",
+
+    "#.###.#####.###",
+
+    "#.............#",
+
+    "#.###.###.###.#",
+
+    "#.............#",
+
+    "###############"
+
+];
+
+
+/* =========================================================
+   COORDENADAS
+========================================================= */
+
+function gridToWorld(
+    col,
+    row
+) {
+
+    const x =
+        (
+            col -
+            (CONFIG.GRID_SIZE - 1) / 2
+        ) * CELL;
+
+
+    const z =
+        (
+            row -
+            (CONFIG.GRID_SIZE - 1) / 2
+        ) * CELL;
+
+
+    return {
+        x,
+        z
+    };
+
+}
+
+
+function worldToGrid(
+    x,
+    z
+) {
+
+    const col =
+        Math.round(
+            x / CELL +
+            (CONFIG.GRID_SIZE - 1) / 2
+        );
+
+
+    const row =
+        Math.round(
+            z / CELL +
+            (CONFIG.GRID_SIZE - 1) / 2
+        );
+
+
+    return {
+        col,
+        row
+    };
+
+}
+
+
+function isWall(
+    col,
+    row
+) {
+
+    if (
+        row < 0 ||
+        row >= CONFIG.GRID_SIZE ||
+        col < 0 ||
+        col >= CONFIG.GRID_SIZE
+    ) {
+
+        return true;
+
+    }
+
+
+    return (
+        MAZE[row][col] === "#"
+    );
+
+}
+
+
+function isWalkable(
+    col,
+    row
+) {
+
+    return !isWall(
+        col,
+        row
+    );
+
+}
+
+
+/* =========================================================
+   SUELO
+========================================================= */
+
+const floorGeometry =
+    new THREE.PlaneGeometry(
+        BOARD_SIZE,
+        BOARD_SIZE
+    );
+
+
+const floorMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color: 0x041322,
+
+        roughness: .72,
+
+        metalness: .15
+
+    });
+
+
+const floor =
+    new THREE.Mesh(
+        floorGeometry,
+        floorMaterial
+    );
+
+
+floor.rotation.x =
+    -Math.PI / 2;
+
+
+floor.position.y =
+    -.05;
+
+
+boardGroup.add(
+    floor
+);
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+const gridMaterial =
+    new THREE.LineBasicMaterial({
+
+        color: 0x0a3955,
+
+        transparent: true,
+
+        opacity: .35
+
+    });
+
+
+for (
+    let i = 0;
+    i <= CONFIG.GRID_SIZE;
+    i++
+) {
+
+    const position =
+        -BOARD_SIZE / 2 +
+        i * CELL;
+
+
+    const geometry =
+        new THREE.BufferGeometry()
+            .setFromPoints([
+
+                new THREE.Vector3(
+                    -BOARD_SIZE / 2,
+                    .01,
+                    position
+                ),
+
+                new THREE.Vector3(
+                    BOARD_SIZE / 2,
+                    .01,
+                    position
+                )
+
+            ]);
+
+
+    boardGroup.add(
+        new THREE.Line(
+            geometry,
+            gridMaterial
+        )
+    );
+
+
+    const geometry2 =
+        new THREE.BufferGeometry()
+            .setFromPoints([
+
+                new THREE.Vector3(
+                    position,
+                    .01,
+                    -BOARD_SIZE / 2
+                ),
+
+                new THREE.Vector3(
+                    position,
+                    .01,
+                    BOARD_SIZE / 2
+                )
+
+            ]);
+
+
+    boardGroup.add(
+        new THREE.Line(
+            geometry2,
+            gridMaterial
+        )
+    );
+
+}
+
+
+/* =========================================================
+   PAREDES
+========================================================= */
+
+const wallMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color: 0x0b75a5,
+
+        emissive: 0x032d46,
+
+        emissiveIntensity: .9,
+
+        roughness: .32,
+
+        metalness: .55
+
+    });
+
+
+const wallTopMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color: 0x58ddff,
+
+        emissive: 0x0c6380,
+
+        emissiveIntensity: .8,
+
+        roughness: .25,
+
+        metalness: .35
+
+    });
+
+
+for (
+    let row = 0;
+    row < CONFIG.GRID_SIZE;
+    row++
+) {
+
+    for (
+        let col = 0;
+        col < CONFIG.GRID_SIZE;
+        col++
+    ) {
+
+        if (
+            !isWall(
+                col,
+                row
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        const position =
+            gridToWorld(
+                col,
+                row
+            );
+
+
+        const wallGeometry =
+            new THREE.BoxGeometry(
+                CELL * .92,
+                1.3,
+                CELL * .92
+            );
+
+
+        const wall =
+            new THREE.Mesh(
+                wallGeometry,
+                wallMaterial
+            );
+
+
+        wall.position.set(
+            position.x,
+            .65,
+            position.z
+        );
+
+
+        boardGroup.add(
+            wall
+        );
+
+
+        const topGeometry =
+            new THREE.BoxGeometry(
+                CELL * .95,
+                .08,
+                CELL * .95
+            );
+
+
+        const top =
+            new THREE.Mesh(
+                topGeometry,
+                wallTopMaterial
+            );
+
+
+        top.position.set(
+            position.x,
+            1.32,
+            position.z
+        );
+
+
+        boardGroup.add(
+            top
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   BORDE
+========================================================= */
+
+const borderGeometry =
+    new THREE.BoxGeometry(
+        BOARD_SIZE + .3,
+        .35,
+        BOARD_SIZE + .3
+    );
+
+
+const borderMaterial =
+    new THREE.MeshStandardMaterial({
+
+        color: 0x06111e,
+
+        emissive: 0x061f34,
+
+        emissiveIntensity: .8
+
+    });
+
+
+const border =
+    new THREE.Mesh(
+        borderGeometry,
+        borderMaterial
+    );
+
+
+border.position.y =
+    -.18;
+
+
+boardGroup.add(
+    border
+);
+
+
+/* =========================================================
+   TEXTURAS
+========================================================= */
+
+const textureLoader =
+    new THREE.TextureLoader();
+
+
+textureLoader.setCrossOrigin(
+    "anonymous"
+);
+
+
+function createFallbackTexture(
+    type
+) {
+
+    const canvas =
+        document.createElement(
+            "canvas"
+        );
+
+
+    canvas.width = 256;
+    canvas.height = 256;
+
+
+    const ctx =
+        canvas.getContext(
+            "2d"
+        );
+
+
+    ctx.clearRect(
+        0,
+        0,
+        256,
+        256
+    );
+
+
+    if (
+        type === "belgrano"
+    ) {
+
+        ctx.fillStyle =
+            "#55dfff";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            128,
+            128,
+            108,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        ctx.fillStyle =
+            "#ffffff";
+
+
+        ctx.font =
+            "900 48px Arial";
+
+
+        ctx.textAlign =
+            "center";
+
+
+        ctx.textBaseline =
+            "middle";
+
+
+        ctx.fillText(
+            "CAB",
+            128,
+            128
+        );
+
+    }
+
+    else {
+
+        ctx.fillStyle =
+            "#1c65aa";
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            128,
+            18
+        );
+
+        ctx.lineTo(
+            220,
+            52
+        );
+
+        ctx.lineTo(
+            200,
+            185
+        );
+
+        ctx.quadraticCurveTo(
+            128,
+            240,
+            56,
+            185
+        );
+
+        ctx.lineTo(
+            36,
+            52
+        );
+
+        ctx.closePath();
+
+        ctx.fill();
+
+
+        ctx.strokeStyle =
+            "#ffffff";
+
+
+        ctx.lineWidth =
+            8;
+
+
+        ctx.stroke();
+
+
+        ctx.fillStyle =
+            "#ffffff";
+
+
+        ctx.font =
+            "900 70px Arial";
+
+
+        ctx.textAlign =
+            "center";
+
+
+        ctx.textBaseline =
+            "middle";
+
+
+        ctx.fillText(
+            "T",
+            128,
+            135
+        );
+
+    }
+
+
+    return new THREE.CanvasTexture(
+        canvas
+    );
+
+}
+
+
+const fallbackBelgrano =
+    createFallbackTexture(
+        "belgrano"
+    );
+
+
+const fallbackTalleres =
+    createFallbackTexture(
+        "talleres"
+    );
+
+
+function loadShieldTexture(
+    url,
+    fallback
+) {
+
+    const texture =
+        fallback.clone();
+
+
+    texture.needsUpdate =
+        true;
+
+
+    textureLoader.load(
+
+        url,
+
+        loadedTexture => {
+
+            loadedTexture.colorSpace =
+                THREE.SRGBColorSpace;
+
+
+            loadedTexture.needsUpdate =
+                true;
+
+
+            texture.image =
+                loadedTexture.image;
+
+
+            texture.colorSpace =
+                THREE.SRGBColorSpace;
+
+
+            texture.needsUpdate =
+                true;
+
+        },
+
+        undefined,
+
+        error => {
+
+            console.warn(
+                "No se pudo cargar el escudo.",
+                error
+            );
+
+        }
+
+    );
+
+
+    return texture;
+
+}
+
+
+const belgranoTexture =
+    loadShieldTexture(
+        CONFIG.BELGRANO_LOGO,
+        fallbackBelgrano
+    );
+
+
+const talleresTexture =
+    loadShieldTexture(
+        CONFIG.TALLERES_LOGO,
+        fallbackTalleres
+    );
+
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+const playerMaterial =
+    new THREE.SpriteMaterial({
+
+        map:
+            belgranoTexture,
+
+        transparent:
+            true,
+
+        depthWrite:
+            false
+
+    });
+
+
+const player =
+    new THREE.Sprite(
+        playerMaterial
+    );
+
+
+player.scale.set(
+    1.55,
+    1.55,
+    1
+);
+
+
+player.position.y =
+    1.0;
+
+
+boardGroup.add(
+    player
+);
+
+
+/* =========================================================
+   GLOW PLAYER
+========================================================= */
+
+const playerGlowGeometry =
+    new THREE.RingGeometry(
+        .62,
+        .76,
+        32
+    );
+
+
+const playerGlowMaterial =
+    new THREE.MeshBasicMaterial({
+
+        color: 0x61e7ff,
+
+        transparent: true,
+
+        opacity: .42,
+
+        side:
+            THREE.DoubleSide
+
+    });
+
+
+const playerGlow =
+    new THREE.Mesh(
+        playerGlowGeometry,
+        playerGlowMaterial
+    );
+
+
+playerGlow.rotation.x =
+    -Math.PI / 2;
+
+
+playerGlow.position.y =
+    .05;
+
+
+boardGroup.add(
+    playerGlow
+);
+
+
+/* =========================================================
+   GALLINITAS
+========================================================= */
+
+const chickens = [];
+
+
+const chickenPositions = [
+
+    [1, 1],
+
+    [13, 1],
+
+    [1, 5],
+
+    [13, 5],
+
+    [1, 11],
+
+    [13, 11],
+
+    [5, 13],
+
+    [9, 13]
+
+];
+
+
+function createChicken(
+    col,
+    row
+) {
+
+    const material =
+        new THREE.SpriteMaterial({
+
+            map:
+                talleresTexture,
+
+            transparent:
+                true,
+
+            depthWrite:
+                false
+
+        });
+
+
+    const sprite =
+        new THREE.Sprite(
+            material
+        );
+
+
+    sprite.scale.set(
+        1.28,
+        1.28,
+        1
+    );
+
+
+    const position =
+        gridToWorld(
+            col,
+            row
+        );
+
+
+    sprite.position.set(
+        position.x,
+        1.0,
+        position.z
+    );
+
+
+    sprite.userData = {
+
+        col: col,
+
+        row: row,
+
+        direction: {
+            x: 0,
+            z: 0
+        },
+
+        nextChange: 0,
+
+        alive: true,
+
+        phase:
+            Math.random() *
+            Math.PI *
+            2
+
+    };
+
+
+    boardGroup.add(
+        sprite
+    );
+
+
+    chickens.push(
+        sprite
+    );
+
+}
+
+
+chickenPositions.forEach(
+    position => {
+
+        createChicken(
+            position[0],
+            position[1]
+        );
+
+    }
+);
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+let score = 0;
+
+let remaining =
+    CONFIG.TOTAL_CHICKENS;
+
+let gameStarted = false;
+
+let gamePaused = false;
+
+let gameWon = false;
+
+let lastTime = 0;
+
+let messageTimer = null;
+
+let autoGoalTimer = null;
+
+
+let playerDirection = {
+    x: 0,
+    z: 0
+};
+
+
+let requestedDirection = {
+    x: 0,
+    z: 0
+};
+
+
+/* =========================================================
+   PLAYER RESET
+========================================================= */
+
+function resetPlayer() {
+
+    const position =
+        gridToWorld(
+            7,
+            7
+        );
+
+
+    player.position.set(
+        position.x,
+        1.0,
+        position.z
+    );
+
+
+    playerDirection = {
+        x: 0,
+        z: 0
+    };
+
+
+    requestedDirection = {
+        x: 0,
+        z: 0
+    };
+
+}
+
+
+/* =========================================================
+   CHICKEN RESET
+========================================================= */
+
+function resetChickens() {
+
+    chickens.forEach(
+        (
+            chicken,
+            index
+        ) => {
+
+            const position =
+                chickenPositions[
+                    index
+                ];
+
+
+            const world =
+                gridToWorld(
+                    position[0],
+                    position[1]
+                );
+
+
+            chicken.visible =
+                true;
+
+
+            chicken.userData.alive =
+                true;
+
+
+            chicken.userData.col =
+                position[0];
+
+
+            chicken.userData.row =
+                position[1];
+
+
+            chicken.userData.direction = {
+                x: 0,
+                z: 0
+            };
+
+
+            chicken.userData.nextChange =
+                0;
+
+
+            chicken.position.set(
+                world.x,
+                1.0,
+                world.z
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+function updateHUD() {
+
+    scoreElement.textContent =
+        score.toLocaleString(
+            "es-AR"
+        );
+
+
+    remainingElement.textContent =
+        remaining;
+
+}
+
+
+/* =========================================================
+   MENSAJE
+========================================================= */
+
+function showMessage(
+    text
+) {
+
+    messageElement.textContent =
+        text;
+
+
+    messageElement.classList.add(
+        "show"
+    );
+
+
+    clearTimeout(
+        messageTimer
+    );
+
+
+    messageTimer =
+        setTimeout(
+            () => {
+
+                messageElement.classList.remove(
+                    "show"
+                );
+
+            },
+            1100
+        );
+
+}
+
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+let audioContext = null;
+
+
+function initAudio() {
+
+    if (!audioContext) {
+
+        const AudioContext =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+
+        if (AudioContext) {
+
+            audioContext =
+                new AudioContext();
+
+        }
+
+    }
+
+
+    if (
+        audioContext &&
+        audioContext.state ===
+        "suspended"
+    ) {
+
+        audioContext.resume();
+
+    }
+
+}
+
+
+function beep(
+    frequency,
+    duration,
+    type = "sine",
+    volume = .055
+) {
+
+    if (!audioContext) {
+        return;
+    }
+
+
+    const oscillator =
+        audioContext.createOscillator();
+
+
+    const gain =
+        audioContext.createGain();
+
+
+    oscillator.type =
+        type;
+
+
+    oscillator.frequency.value =
+        frequency;
+
+
+    gain.gain.setValueAtTime(
+        volume,
+        audioContext.currentTime
+    );
+
+
+    gain.gain.exponentialRampToValueAtTime(
+        .0001,
+
+        audioContext.currentTime +
+        duration
+    );
+
+
+    oscillator.connect(
+        gain
+    );
+
+
+    gain.connect(
+        audioContext.destination
+    );
+
+
+    oscillator.start();
+
+
+    oscillator.stop(
+        audioContext.currentTime +
+        duration
+    );
+
+}
+
+
+function captureSound() {
+
+    beep(
+        520,
+        .08,
+        "square",
+        .07
+    );
+
+
+    setTimeout(
+        () => {
+
+            beep(
+                740,
+                .10,
+                "square",
+                .06
+            );
+
+        },
+        70
+    );
+
+}
+
+
+function victorySound() {
+
+    const notes = [
+        523,
+        659,
+        784,
+        1046
+    ];
+
+
+    notes.forEach(
+        (
+            note,
+            index
+        ) => {
+
+            setTimeout(
+                () => {
+
+                    beep(
+                        note,
+                        .18,
+                        "triangle",
+                        .09
+                    );
+
+                },
+                index * 130
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   VOZ
+========================================================= */
+
+function sayMetilli() {
+
+    if (
+        !(
+            "speechSynthesis"
+            in window
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    window.speechSynthesis.cancel();
+
+
+    const utterance =
+        new SpeechSynthesisUtterance(
+            "¡Te la Metilli!"
+        );
+
+
+    utterance.lang =
+        "es-AR";
+
+
+    utterance.rate =
+        1.12;
+
+
+    utterance.pitch =
+        1.05;
+
+
+    utterance.volume =
+        1;
+
+
+    window.speechSynthesis.speak(
+        utterance
+    );
+
+}
+
+
+/* =========================================================
+   COLISIÓN CON PAREDES
+========================================================= */
+
+function canMove(
+    x,
+    z
+) {
+
+    const margin =
+        .28;
+
+
+    const points = [
+
+        [
+            x + margin,
+            z
+        ],
+
+        [
+            x - margin,
+            z
+        ],
+
+        [
+            x,
+            z + margin
+        ],
+
+        [
+            x,
+            z - margin
+        ]
+
+    ];
+
+
+    return points.every(
+        point => {
+
+            const grid =
+                worldToGrid(
+                    point[0],
+                    point[1]
+                );
+
+
+            return isWalkable(
+                grid.col,
+                grid.row
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DIRECCIÓN
+========================================================= */
+
+function setDirection(
+    direction
+) {
+
+    if (
+        direction === "up"
+    ) {
+
+        requestedDirection = {
+            x: 0,
+            z: -1
+        };
+
+    }
+
+
+    if (
+        direction === "down"
+    ) {
+
+        requestedDirection = {
+            x: 0,
+            z: 1
+        };
+
+    }
+
+
+    if (
+        direction === "left"
+    ) {
+
+        requestedDirection = {
+            x: -1,
+            z: 0
+        };
+
+    }
+
+
+    if (
+        direction === "right"
+    ) {
+
+        requestedDirection = {
+            x: 1,
+            z: 0
+        };
+
+    }
+
+}
+
+
+/* =========================================================
+   MOVIMIENTO PLAYER
+========================================================= */
+
+function updatePlayer(
+    delta
+) {
+
+    const speed =
+        CONFIG.PLAYER_SPEED *
+        delta;
+
+
+    const requestedX =
+        player.position.x +
+        requestedDirection.x *
+        speed;
+
+
+    const requestedZ =
+        player.position.z +
+        requestedDirection.z *
+        speed;
+
+
+    if (
+        requestedDirection.x !== 0 ||
+        requestedDirection.z !== 0
+    ) {
+
+        if (
+            canMove(
+                requestedX,
+                requestedZ
+            )
+        ) {
+
+            playerDirection = {
+                ...requestedDirection
+            };
+
+        }
+
+    }
+
+
+    const moveX =
+        player.position.x +
+        playerDirection.x *
+        speed;
+
+
+    const moveZ =
+        player.position.z +
+        playerDirection.z *
+        speed;
+
+
+    if (
+        canMove(
+            moveX,
+            player.position.z
+        )
+    ) {
+
+        player.position.x =
+            moveX;
+
+    }
+
+
+    if (
+        canMove(
+            player.position.x,
+            moveZ
+        )
+    ) {
+
+        player.position.z =
+            moveZ;
+
+    }
+
+
+    playerGlow.position.x =
+        player.position.x;
+
+
+    playerGlow.position.z =
+        player.position.z;
+
+
+    const pulse =
+        1 +
+        Math.sin(
+            performance.now() *
+            .006
+        ) *
+        .08;
+
+
+    player.scale.set(
+        1.55 * pulse,
+        1.55 * pulse,
+        1
+    );
+
+}
+
+
+/* =========================================================
+   DIRECCIONES POSIBLES GALLINA
+========================================================= */
+
+function getPossibleDirections(
+    chicken
+) {
+
+    const directions = [
+
+        {
+            x: 1,
+            z: 0
+        },
+
+        {
+            x: -1,
+            z: 0
+        },
+
+        {
+            x: 0,
+            z: 1
+        },
+
+        {
+            x: 0,
+            z: -1
+        }
+
+    ];
+
+
+    return directions.filter(
+        direction => {
+
+            const testX =
+                chicken.position.x +
+                direction.x *
+                .72;
+
+
+            const testZ =
+                chicken.position.z +
+                direction.z *
+                .72;
+
+
+            return canMove(
+                testX,
+                testZ
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   MOVIMIENTO GALLINAS
+========================================================= */
+
+function updateChicken(
+    chicken,
+    delta,
+    time
+) {
+
+    if (
+        !chicken.userData.alive
+    ) {
+
+        return;
+
+    }
+
+
+    const data =
+        chicken.userData;
+
+
+    if (
+        time >
+        data.nextChange
+    ) {
+
+        const possible =
+            getPossibleDirections(
+                chicken
+            );
+
+
+        if (
+            possible.length
+        ) {
+
+            const random =
+                possible[
+                    Math.floor(
+                        Math.random() *
+                        possible.length
+                    )
+                ];
+
+
+            data.direction =
+                random;
+
+        }
+
+
+        data.nextChange =
+            time +
+            600 +
+            Math.random() *
+            900;
+
+    }
+
+
+    const speed =
+        CONFIG.CHICKEN_SPEED *
+        delta;
+
+
+    const nextX =
+        chicken.position.x +
+        data.direction.x *
+        speed;
+
+
+    const nextZ =
+        chicken.position.z +
+        data.direction.z *
+        speed;
+
+
+    if (
+        canMove(
+            nextX,
+            nextZ
+        )
+    ) {
+
+        chicken.position.x =
+            nextX;
+
+
+        chicken.position.z =
+            nextZ;
+
+    }
+
+    else {
+
+        data.nextChange =
+            0;
+
+    }
+
+
+    chicken.position.y =
+        1.0 +
+        Math.sin(
+            time * .006 +
+            data.phase
+        ) *
+        .08;
+
+
+    const pulse =
+        1 +
+        Math.sin(
+            time * .008 +
+            data.phase
+        ) *
+        .07;
+
+
+    chicken.scale.set(
+        1.28 * pulse,
+        1.28 * pulse,
+        1
+    );
+
+}
+
+
+/* =========================================================
+   COLISIONES
+========================================================= */
+
+function checkChickenCollisions() {
+
+    chickens.forEach(
+        chicken => {
+
+            if (
+                !chicken.userData.alive
+            ) {
+
+                return;
+
+            }
+
+
+            const dx =
+                player.position.x -
+                chicken.position.x;
+
+
+            const dz =
+                player.position.z -
+                chicken.position.z;
+
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dz * dz
+                );
+
+
+            if (
+                distance < .85
+            ) {
+
+                captureChicken(
+                    chicken
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   CAPTURAR GALLINA
+========================================================= */
+
+function captureChicken(
+    chicken
+) {
+
+    chicken.userData.alive =
+        false;
+
+
+    chicken.visible =
+        false;
+
+
+    remaining--;
+
+
+    score +=
+        CONFIG.POINTS_PER_CHICKEN;
+
+
+    updateHUD();
+
+
+    captureSound();
+
+
+    sayMetilli();
+
+
+    showMessage(
+        "¡TE LA METILLI!"
+    );
+
+
+    createCaptureEffect(
+        chicken.position
+    );
+
+
+    if (
+        remaining <= 0
+    ) {
+
+        finishGame();
+
+    }
+
+}
+
+
+/* =========================================================
+   EFECTOS
+========================================================= */
+
+const effects = [];
+
+
+function createCaptureEffect(
+    position
+) {
+
+    const group =
+        new THREE.Group();
+
+
+    for (
+        let i = 0;
+        i < 12;
+        i++
+    ) {
+
+        const geometry =
+            new THREE.SphereGeometry(
+                .045,
+                5,
+                5
+            );
+
+
+        const material =
+            new THREE.MeshBasicMaterial({
+
+                color:
+                    i % 2 === 0
+                        ? 0x61e7ff
+                        : 0xffffff
+
+            });
+
+
+        const particle =
+            new THREE.Mesh(
+                geometry,
+                material
+            );
+
+
+        particle.position.set(
+            position.x,
+            1,
+            position.z
+        );
+
+
+        particle.userData = {
+
+            velocity: {
+
+                x:
+                    (
+                        Math.random() -
+                        .5
+                    ) * 3,
+
+                y:
+                    Math.random() * 3,
+
+                z:
+                    (
+                        Math.random() -
+                        .5
+                    ) * 3
+
+            },
+
+            life: 1
+
+        };
+
+
+        group.add(
+            particle
+        );
+
+    }
+
+
+    boardGroup.add(
+        group
+    );
+
+
+    effects.push(
+        group
+    );
+
+}
+
+
+function updateEffects(
+    delta
+) {
+
+    for (
+        let i = effects.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const group =
+            effects[i];
+
+
+        group.children.forEach(
+            particle => {
+
+                const velocity =
+                    particle.userData
+                        .velocity;
+
+
+                particle.position.x +=
+                    velocity.x *
+                    delta;
+
+
+                particle.position.y +=
+                    velocity.y *
+                    delta;
+
+
+                particle.position.z +=
+                    velocity.z *
+                    delta;
+
+
+                velocity.y -=
+                    5 *
+                    delta;
+
+
+                particle.userData.life -=
+                    delta;
+
+
+                particle.material.opacity =
+                    Math.max(
+                        0,
+                        particle.userData.life
+                    );
+
+
+                particle.material.transparent =
+                    true;
+
+            }
+        );
+
+
+        if (
+            group.children.length &&
+            group.children[0]
+                .userData
+                .life <= 0
+        ) {
+
+            boardGroup.remove(
+                group
+            );
+
+
+            effects.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   FIN DEL JUEGO
+========================================================= */
+
+function finishGame() {
+
+    if (
+        gameWon
+    ) {
+
+        return;
+
+    }
+
+
+    gameWon =
+        true;
+
+
+    gamePaused =
+        true;
+
+
+    victorySound();
+
+
+    setTimeout(
+        () => {
+
+            winScreen.classList.remove(
+                "hidden"
+            );
+
+        },
+        550
+    );
+
+
+    clearTimeout(
+        autoGoalTimer
+    );
+
+
+    autoGoalTimer =
+        setTimeout(
+            () => {
+
+                openGoalVideo();
+
+            },
+            2800
+        );
+
+}
+
+
+/* =========================================================
+   ABRIR VIDEO
+========================================================= */
+
+function openGoalVideo() {
+
+    window.location.href =
+        CONFIG.GOAL_URL;
+
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+function resetGame() {
+
+    clearTimeout(
+        autoGoalTimer
+    );
+
+
+    score =
+        0;
+
+
+    remaining =
+        CONFIG.TOTAL_CHICKENS;
+
+
+    gameWon =
+        false;
+
+
+    gamePaused =
+        false;
+
+
+    resetPlayer();
+
+
+    resetChickens();
+
+
+    updateHUD();
+
+
+    pauseScreen.classList.add(
+        "hidden"
+    );
+
+
+    winScreen.classList.add(
+        "hidden"
+    );
+
+
+    messageElement.classList.remove(
+        "show"
+    );
+
+
+    pauseButton.textContent =
+        "❚❚";
+
+
+    gameStarted =
+        true;
+
+
+    lastTime =
+        performance.now();
+
+}
+
+
+/* =========================================================
+   PAUSA
+========================================================= */
+
+function togglePause() {
+
+    if (
+        !gameStarted ||
+        gameWon
+    ) {
+
+        return;
+
+    }
+
+
+    gamePaused =
+        !gamePaused;
+
+
+    if (
+        gamePaused
+    ) {
+
+        pauseScreen.classList.remove(
+            "hidden"
+        );
+
+
+        pauseButton.textContent =
+            "▶";
+
+    }
+
+    else {
+
+        pauseScreen.classList.add(
+            "hidden"
+        );
+
+
+        pauseButton.textContent =
+            "❚❚";
+
+
+        lastTime =
+            performance.now();
+
+    }
+
+}
+
+
+/* =========================================================
+   INICIAR
+========================================================= */
+
+function startGame() {
+
+    initAudio();
+
+
+    startScreen.classList.add(
+        "hidden"
+    );
+
+
+    resetGame();
+
+}
+
+
+/* =========================================================
+   EVENTOS BOTONES
+========================================================= */
+
+startButton.addEventListener(
+    "click",
+    startGame
+);
+
+
+pauseButton.addEventListener(
+    "click",
+    togglePause
+);
+
+
+restartButton.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+
+        resetGame();
+
+    }
+);
+
+
+resumeButton.addEventListener(
+    "click",
+    () => {
+
+        togglePause();
+
+    }
+);
+
+
+goalButton.addEventListener(
+    "click",
+    () => {
+
+        openGoalVideo();
+
+    }
+);
+
+
+playAgainButton.addEventListener(
+    "click",
+    () => {
+
+        resetGame();
+
+    }
+);
+
+
+/* =========================================================
+   TECLADO
+========================================================= */
+
+window.addEventListener(
+    "keydown",
+    event => {
+
+        const key =
+            event.key.toLowerCase();
+
+
+        if (
+            [
+                "arrowup",
+                "arrowdown",
+                "arrowleft",
+                "arrowright",
+                "w",
+                "a",
+                "s",
+                "d",
+                " "
+            ].includes(key)
+        ) {
+
+            event.preventDefault();
+
+        }
+
+
+        if (
+            key === "arrowup" ||
+            key === "w"
+        ) {
+
+            setDirection(
+                "up"
+            );
+
+        }
+
+
+        if (
+            key === "arrowdown" ||
+            key === "s"
+        ) {
+
+            setDirection(
+                "down"
+            );
+
+        }
+
+
+        if (
+            key === "arrowleft" ||
+            key === "a"
+        ) {
+
+            setDirection(
+                "left"
+            );
+
+        }
+
+
+        if (
+            key === "arrowright" ||
+            key === "d"
+        ) {
+
+            setDirection(
+                "right"
+            );
+
+        }
+
+
+        if (
+            key === " "
+        ) {
+
+            togglePause();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   CONTROLES TÁCTILES
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".control"
+    )
+    .forEach(
+        button => {
+
+            const direction =
+                button.dataset.direction;
+
+
+            button.addEventListener(
+                "pointerdown",
+                event => {
+
+                    event.preventDefault();
+
+                    initAudio();
+
+                    setDirection(
+                        direction
+                    );
+
+                }
+            );
+
+
+            button.addEventListener(
+                "touchstart",
+                event => {
+
+                    event.preventDefault();
+
+                    initAudio();
+
+                    setDirection(
+                        direction
+                    );
+
+                },
+                {
+                    passive: false
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   VISIBILIDAD
+========================================================= */
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+        if (
+            document.hidden &&
+            gameStarted &&
+            !gamePaused &&
+            !gameWon
+        ) {
+
+            togglePause();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+window.addEventListener(
+    "orientationchange",
+    () => {
+
+        setTimeout(
+            resize,
+            120
+        );
+
+    }
+);
+
+
+function resize() {
+
+    camera.aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+
+    camera.updateProjectionMatrix();
+
+
+    renderer.setPixelRatio(
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        )
+    );
+
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+}
+
+
+/* =========================================================
+   CÁMARA RESPONSIVE
+========================================================= */
+
+function updateCamera() {
+
+    const aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+
+    if (
+        aspect < .75
+    ) {
+
+        camera.position.set(
+            0,
+            25,
+            18
+        );
+
+    }
+
+    else if (
+        aspect < 1.15
+    ) {
+
+        camera.position.set(
+            0,
+            23,
+            17
+        );
+
+    }
+
+    else {
+
+        camera.position.set(
+            0,
+            21,
+            15
+        );
+
+    }
+
+
+    camera.lookAt(
+        0,
+        0,
+        0
+    );
+
+}
+
+
+/* =========================================================
+   LOOP PRINCIPAL
+========================================================= */
+
+function animate(
+    time
+) {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    updateCamera();
+
+
+    if (
+        !lastTime
+    ) {
+
+        lastTime =
+            time;
+
+    }
+
+
+    let delta =
+        (
+            time -
+            lastTime
+        ) / 1000;
+
+
+    delta =
+        Math.min(
+            delta,
+            .05
+        );
+
+
+    lastTime =
+        time;
+
+
+    if (
+        gameStarted &&
+        !gamePaused &&
+        !gameWon
+    ) {
+
+        updatePlayer(
+            delta
+        );
+
+
+        chickens.forEach(
+            chicken => {
+
+                updateChicken(
+                    chicken,
+                    delta,
+                    time
+                );
+
+            }
+        );
+
+
+        checkChickenCollisions();
+
+    }
+
+
+    updateEffects(
+        delta
+    );
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+}
+
+
+/* =========================================================
+   ARRANQUE
+========================================================= */
+
+resetPlayer();
+
+resetChickens();
+
+updateHUD();
+
+resize();
+
+animate(
+    performance.now()
+);
+
+</script>
+
+</body>
+</html>
